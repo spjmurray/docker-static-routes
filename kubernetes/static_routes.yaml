@@ -1,0 +1,30 @@
+apiVersion: extensions/v1beta1
+kind: DaemonSet
+metadata:
+  name: static-routes
+  namespace: default
+  labels:
+    app: static-routes
+spec:
+  selector:
+    matchLabels:
+      name: static-routes
+  template:
+    metadata:
+      labels:
+        name: static-routes
+    spec:
+      hostNetwork: true
+      containers:
+      - name: static-routes
+        image: couchbase/static_routes:1.0.0
+        securityContext:
+          capabilities:
+            add:
+            - NET_ADMIN
+        env:
+        - name: STATIC_ROUTES_PREFIXES
+          value: 10.1.0.0/16,10.2.0.0/24
+        - name: STATIC_ROUTES_NEXTHOP
+          value: 172.17.0.2
+        

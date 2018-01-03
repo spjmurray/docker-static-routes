@@ -1,0 +1,65 @@
+#!/usr/bin/env python
+"""
+Static Route Injector
+Copyright 2018 Simon Murray <simon.murray@couchbase.com>
+
+Simple script to inject static routes into the routing table on each Kubernetes
+node.  It is intended to be deployed as a DaemonSet with node level networking
+so traffic from all nodes and pods will get routed to the correct next hop.
+"""
+
+import logging
+import os
+import signal
+import sys
+import time
+
+import pyroute2
+
+
+def main():
+    """
+    Parses environment parameters, for now a comma separated list of prefixes
+    and a single next-hop router, and installs them onto the node.  Signal
+    handlers are registered to catch container shutdown and remove them from
+    the node.
+    """
+
+    # Setup logging to standard out
+    logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+
+    # Parse our command line arguments
+    prefixes = os.environ['STATIC_ROUTES_PREFIXES'].split(',')
+    nexthop = os.environ['STATIC_ROUTES_NEXTHOP']
+
+    # Create our routing interface
+    iproute = pyroute2.IPRoute()
+
+    # Define the shutdown handler as a closure so it has access to args
+    def shutdown():
+        """
+        Argument aware closure to unregister routes on termination
+        """
+        for prefix in prefixes:
+            if iproute.route('show', dst=prefix, gateway=nexthop):
+                logging.info('ip route del %s via %s', prefix, nexthop)
+                iproute.route('del', dst=prefix, gateway=nexthop)
+        sys.exit()
+
+    # Register a signal handler so we can shutdown cleanly
+    signal.signal(signal.SIGINT, shutdown)
+    signal.signal(signal.SIGTERM, shutdown)
+
+    # Main loop, add in routes periodically
+    while True:
+        for prefix in prefixes:
+            if not iproute.route('show', dst=prefix, gateway=nexthop):
+                logging.info('ip route add %s via %s', prefix, nexthop)
+                iproute.route('add', dst=prefix, gateway=nexthop)
+        time.sleep(10)
+
+
+if __name__ == '__main__':
+    main()
+
+# vi: ts=4 et:
