@@ -11,4 +11,4 @@ COPY static_routes /usr/local/bin/
 
 # Execute explicitily via bash to get access to the environment and
 # also to allow propagation of SIGTERM signals to perform the cleanup
-CMD [ "/bin/bash", "-c", "/usr/local/bin/static_routes" ]
+CMD [ "/usr/local/bin/static_routes" ]

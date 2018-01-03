@@ -36,7 +36,8 @@ def main():
     iproute = pyroute2.IPRoute()
 
     # Define the shutdown handler as a closure so it has access to args
-    def shutdown():
+    # pylint: disable=unused-argument
+    def shutdown(signum, frame):
         """
         Argument aware closure to unregister routes on termination
         """
